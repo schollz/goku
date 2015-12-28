@@ -173,7 +173,7 @@ func randChoices(limits []int) (choices []int) {
 	return
 }
 
-func listAlternates(input []string) (output [50][]string) {
+func listAlternates(input []string) (output [10000][]string) {
 	totals := make([]int, len(input))
 	for i, w := range input {
 		totals[i] = len(getSynonyms(w))

@@ -92,22 +92,6 @@ func loadThesaurus(path string) (map[string][]string, error) {
 
 }
 
-func appendIfUnique(w string, l []int, n int) []int {
-
-	if l == nil {
-		return append(l, n)
-	}
-
-	// ugly, but len(l) == 0 almost always, and 1 or 2 very rarely
-	for _, v := range l {
-		if v == n {
-			return l
-		}
-	}
-
-	return append(l, n)
-}
-
 func getSynonyms(w string) (possibilities []string) {
 	// returns a list of synonyms that have a unique number of syllables
 
@@ -116,14 +100,11 @@ func getSynonyms(w string) (possibilities []string) {
 	for _, synonym := range thesaurus[w] {
 		sylbls := syllables[synonym]
 		if sylbls > 0 {
-			fmt.Println(synonym)
-			fmt.Println(syllables[synonym])
 			if _, ok := syllablesAccountedFor[sylbls]; ok {
-
+				// pass
 			} else {
 				syllablesAccountedFor[sylbls] = synonym
 			}
-
 		}
 	}
 

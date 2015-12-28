@@ -59,6 +59,15 @@ func loadCmudict(path string) (map[string]int, error) {
 	return m, nil
 }
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
 func loadThesaurus(path string) (map[string][]string, error) {
 
 	m := make(map[string][]string)
@@ -77,10 +86,13 @@ func loadThesaurus(path string) (map[string][]string, error) {
 			// skip if doesn't have syllables
 			continue
 		}
-
-		for i, w := range words {
-			if i > 1 {
-				m[words[1]] = append(m[words[1]], w)
+		for j, _ := range words {
+			for i, w := range words {
+				if j > 0 && i > 0 && i != j {
+					if stringInSlice(w, m[words[j]]) == false {
+						m[words[j]] = append(m[words[j]], w)
+					}
+				}
 			}
 		}
 	}
@@ -173,7 +185,7 @@ func randChoices(limits []int) (choices []int) {
 	return
 }
 
-func listAlternates(input []string) (output [10000][]string) {
+func listAlternates(input []string) (output [100][]string) {
 	totals := make([]int, len(input))
 	for i, w := range input {
 		totals[i] = len(getSynonyms(w))
@@ -194,6 +206,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(thesaurus["wonderful"])
 	cmudict, err = loadCmudict("./resources/cmudict.0.7a")
 	if err != nil {
 		panic(err)

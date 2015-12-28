@@ -8,11 +8,12 @@ import (
 )
 
 var thesaurus map[string][]string
-var syllables map[string][]int
+var syllables map[string]int
+var err error
 
-func loadCmudict(path string) (map[string][]int, error) {
+func loadCmudict(path string) (map[string]int, error) {
 
-	m := make(map[string][]int, 140000)
+	m := make(map[string]int, 140000)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -45,9 +46,9 @@ func loadCmudict(path string) (map[string][]int, error) {
 			}
 		}
 
-		syl := m[w]
-		syl = appendIfUnique(w, syl, c)
-		m[w] = syl
+		//syl := m[w]
+		//syl = appendIfUnique(w, syl, c)
+		m[w] = c
 	}
 
 	if err := scan.Err(); err != nil {
@@ -107,17 +108,49 @@ func appendIfUnique(w string, l []int, n int) []int {
 	return append(l, n)
 }
 
-func main() {
+func getSynonyms(w string) (possibilities []string) {
+	// returns a list of synonyms that have a unique number of syllables
 
-	thesaurus, err := loadThesaurus("./resources/th_en_US_new.dat")
+	syllablesAccountedFor := make(map[int]string)
+	syllablesAccountedFor[syllables[w]] = w
+	for _, synonym := range thesaurus[w] {
+		sylbls := syllables[synonym]
+		if sylbls > 0 {
+			fmt.Println(synonym)
+			fmt.Println(syllables[synonym])
+			if _, ok := syllablesAccountedFor[sylbls]; ok {
+
+			} else {
+				syllablesAccountedFor[sylbls] = synonym
+			}
+
+		}
+	}
+
+	for _, word := range syllablesAccountedFor {
+		possibilities = append(possibilities, word)
+	}
+	return
+}
+
+func init() {
+	// initialize the thesaurs and the syllable dictionary
+
+	thesaurus, err = loadThesaurus("./resources/th_en_US_new.dat")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(thesaurus["chocolate"])
-	syllables, err := loadCmudict("./resources/cmudict.0.7a")
+	syllables, err = loadCmudict("./resources/cmudict.0.7a")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(syllables["chocolate"])
+
+}
+
+func main() {
+
+	fmt.Println(getSynonyms("gun"))
 
 }

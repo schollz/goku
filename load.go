@@ -119,6 +119,43 @@ func getSynonyms(w string) (possibilities []string) {
 	return
 }
 
+func getHaikus(words []string) (haikus []string) {
+	gotHaiku := true
+	i := 0
+	for {
+		i, gotHaiku = isHaiku(words)
+		if gotHaiku == false {
+			return
+		}
+		fmt.Println(i)
+		fmt.Println(gotHaiku)
+		haikus = append(haikus, strings.Join(words[:i], " "))
+		words = words[i:]
+	}
+}
+
+func isHaiku(words []string) (int, bool) {
+	checks := []int{5, 7, 5}
+	curCheck := 0
+	runningTotal := 0
+
+	for i, word := range words {
+		slbles := cmudict[word]
+		runningTotal = runningTotal + slbles
+		if runningTotal == checks[curCheck] {
+			curCheck += 1
+			if curCheck == 3 {
+				return i + 1, true
+			}
+			runningTotal = 0
+		}
+		if runningTotal > checks[curCheck] {
+			return -1, false
+		}
+	}
+	return -1, false
+}
+
 func init() {
 	// initialize the thesaurs and the syllable dictionary
 
@@ -140,5 +177,8 @@ func init() {
 func main() {
 
 	fmt.Println(getSynonyms("the"))
+
+	words := strings.Split(`want to play a game with seventeen syllables we write some poem want to play a game with seventeen syllables we write some poem something else`, " ")
+	fmt.Println(getHaikus(words))
 
 }

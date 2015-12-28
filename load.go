@@ -2,37 +2,19 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 )
 
 var thesaurus map[string][]string
-var cmudict map[string][]int
+var cmudict map[string]int
 var skipwords []string
 var err error
 
-func appendIfUnique(w string, l []int, n int) []int {
+func loadCmudict(path string) (map[string]int, error) {
 
-	if l == nil {
-		return append(l, n)
-	}
-
-	// ugly, but len(l) == 0 almost always, and 1 or 2 very rarely
-	for _, v := range l {
-		if v == n {
-			return l
-		}
-	}
-
-	return append(l, n)
-}
-
-func loadCmudict(path string) (map[string][]int, error) {
-
-	m := make(map[string][]int, 140000)
+	m := make(map[string]int, 140000)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -65,9 +47,7 @@ func loadCmudict(path string) (map[string][]int, error) {
 			}
 		}
 
-		syl := m[w]
-		syl = appendIfUnique(w, syl, c)
-		m[w] = syl
+		m[w] = c
 	}
 
 	if err := scan.Err(); err != nil {
@@ -123,7 +103,7 @@ func getSynonyms(w string) (possibilities []string) {
 
 	syllablesAccountedFor := make(map[int]string)
 	for _, synonym := range thesaurus[w] {
-		sylbls := cmudict[synonym][0]
+		sylbls := cmudict[synonym]
 		if sylbls > 0 {
 			if _, ok := syllablesAccountedFor[sylbls]; ok {
 				// pass
@@ -137,102 +117,6 @@ func getSynonyms(w string) (possibilities []string) {
 		possibilities = append(possibilities, word)
 	}
 	return
-}
-
-func formatPoem(poem []string, syllables []int) (string, error) {
-
-	l := 0
-	c := syllables[l]
-
-	h := &bytes.Buffer{}
-
-	processed := 0
-
-	for _, p := range poem {
-		processed++
-		word := p
-
-		word = strings.ToUpper(word)
-
-		word = strings.Map(func(r rune) rune {
-			if 'A' <= r && r <= 'Z' {
-				return r
-			}
-			return -1
-		}, word)
-
-		a := cmudict[word]
-		if a == nil || len(a) == 0 {
-
-			prefixes := []struct {
-				prefix    string
-				syllables int
-			}{
-				{"ANTI", 2},
-				{"DE", 1},
-				{"DIS", 1},
-				{"EX", 1},
-				{"MEGA", 2},
-				{"MINI", 2},
-				{"MIS", 1},
-				{"MULTI", 2},
-				{"NON", 1},
-				{"POST", 1},
-				{"PRE", 1},
-				{"PRO", 1},
-				{"PROTO", 2},
-				{"QUASI", 2},
-				{"RE", 1},
-				{"SEMI", 2},
-				{"UN", 1},
-				{"VICE", 1},
-			}
-
-			for _, p := range prefixes {
-				if strings.HasPrefix(word, p.prefix) {
-					w := strings.TrimPrefix(word, p.prefix)
-					a = cmudict[w]
-					if a != nil && len(a) != 0 {
-						a[0] += p.syllables
-						break
-					}
-				}
-			}
-
-			if a == nil || len(a) == 0 {
-				return "", errors.New("unknown word: " + word)
-			}
-		}
-
-		if len(a) > 1 {
-			return "", errors.New("don't yet handle words with multiple syllable counts")
-		}
-
-		c -= a[0]
-
-		if c < 0 {
-			break
-		}
-
-		fmt.Fprint(h, p)
-
-		if c > 0 {
-			fmt.Fprint(h, " ")
-		} else {
-			fmt.Fprint(h, "\n")
-			l++
-			if l >= len(syllables) {
-				break
-			}
-			c = syllables[l]
-		}
-	}
-
-	if processed != len(poem) || c != 0 {
-		return "", errors.New("not a haiku")
-	}
-
-	return h.String(), nil
 }
 
 func init() {
@@ -256,54 +140,5 @@ func init() {
 func main() {
 
 	fmt.Println(getSynonyms("the"))
-
-	scan := `In my old home
-which I forsook, the cherries
-are in bloom.`
-
-	var poem []string
-
-	var sentenceFinished bool
-
-	for _, word := range strings.Split(scan, " ") {
-		t := word
-
-		poem = append(poem, t)
-		lastRune := t[len(t)-1]
-
-		if lastRune == '.' || lastRune == '?' || lastRune == '!' {
-			sentenceFinished = true
-		}
-
-		if sentenceFinished {
-
-			switch t {
-			case "Mr.":
-				fallthrough
-			case "Dr.":
-				fallthrough
-			case "Ms.":
-				fallthrough
-			case "Mrs.":
-				fallthrough
-			case "Sr.":
-				sentenceFinished = false
-			}
-
-			if sentenceFinished {
-
-				syllables := []int{5, 7, 5}
-
-				p, err := formatPoem(poem, syllables)
-				if err == nil {
-					fmt.Println(p)
-				}
-				sentenceFinished = false
-				poem = poem[:0]
-			}
-		}
-	}
-
-	fmt.Println(poem)
 
 }

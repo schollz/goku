@@ -47,8 +47,8 @@ func getSynonyms(w string) (possibilities []string) {
 
 func init() {
 	// initialize the thesaurs and the syllable dictionary
-
-	thesaurus, err := loadThesaurus("./resources/th_en_US_new.dat")
+	var err error
+	thesaurus, err = loadThesaurus("./resources/th_en_US_new.dat")
 	if err != nil {
 		panic(err)
 	}

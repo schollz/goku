@@ -45,3 +45,7 @@ func TestToWords(t *testing.T) {
 		assert.True(t, reflect.DeepEqual(sentanceToWords(c.in), c.out), fmt.Sprintf("%+v\n%+v", c, sentanceToWords(c.in)))
 	}
 }
+
+func TestSynonyms(t *testing.T) {
+	assert.Equal(t, 4, len(getSynonyms("chocolate")))
+}

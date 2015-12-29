@@ -60,8 +60,7 @@ func init() {
 }
 
 func main() {
-	sentence := `Classical thinkers employed classification as a way to define and assess the quality of poetry. Notably, Aristotle's Poetics describes the three genres of poetry: the epic, comic, and tragic, and develops rules to distinguish the highest-quality poetry of each genre, based on the underlying purposes of that genre`
-	sentence = "Our smart homes and connected worlds are going to happen one device, one bulb at a time, not in a single motion."
+	sentence := "Dogs have more fun than you every day of the week and they love to eat tacos."
 	sentenceWords = sentanceToWords(sentence)
 	fmt.Println("ORIGINAL:")
 	fmt.Println(sentence)
@@ -100,7 +99,7 @@ func main() {
 	fmt.Printf("\n\nGood nodes: ")
 	fmt.Println(goodNodes)
 
-	for syllableTargetI := 1; syllableTargetI < 5; syllableTargetI++ {
+	for syllableTargetI := 1; syllableTargetI < 3; syllableTargetI++ {
 		syllableTarget = syllableTargets[syllableTargetI%len(syllableTargets)]
 		nodes = nil
 		for n := 0; n < len(goodNodes); n++ {
@@ -135,6 +134,12 @@ func main() {
 		fmt.Printf("\n\nGood nodes: ")
 		fmt.Println(goodNodes)
 
+	}
+
+	for n := 0; n < len(goodNodes); n++ {
+		if goodNodes[n].end == len(sentenceWords)-1 {
+			fmt.Println(goodNodes[n])
+		}
 	}
 
 	// Todo: replace each word with the puncuation near the word in the original

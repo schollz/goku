@@ -330,14 +330,16 @@ func main() {
 
 	}
 
-	// nodes := make([]node, len(goodNodes))
-	// nodes = goodNodes
-	// fmt.Println(nodes)
-	// syllableTarget := 5
-	// for i := 1; i <= syllableTarget; i++ {
-	// 	fmt.Println(sentenceWords[0:i])
-	// 	nodes[i].start
-	// }
+	nodes = nil
+	syllableTarget := 5
+	for n := 0; n < len(goodNodes); n++ {
+		for i := 1; i <= syllableTarget; i++ {
+			fmt.Println(goodNodes.haikus[0])
+			fmt.Println(sentenceWords[goodNodes[n].end : goodNodes[n].start+i])
+			nodes = append(nodes, node{start: goodNodes[n].end, end: goodNodes[n].start + i})
+		}
+
+	}
 
 	// alternatives := listAlternates(words)
 	// bestNum := 0

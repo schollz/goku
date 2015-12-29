@@ -61,12 +61,16 @@ func init() {
 
 func main() {
 	sentence := `Classical thinkers employed classification as a way to define and assess the quality of poetry. Notably, Aristotle's Poetics describes the three genres of poetry: the epic, comic, and tragic, and develops rules to distinguish the highest-quality poetry of each genre, based on the underlying purposes of that genre`
+	sentence = "Our smart homes and connected worlds are going to happen one device, one bulb at a time, not in a single motion."
 	sentenceWords = sentanceToWords(sentence)
 	fmt.Println("ORIGINAL:")
 	fmt.Println(sentence)
 	fmt.Println(sentenceWords)
 	var goodNodes []node
-	syllableTarget := 5
+
+	syllableTargets := []int{5, 7, 5}
+
+	syllableTarget := syllableTargets[0]
 	for i := 1; i <= syllableTarget; i++ {
 		fmt.Println(sentenceWords[0:i])
 		nodes = append(nodes, node{start: 0, end: i})
@@ -74,7 +78,6 @@ func main() {
 	for i := 0; i < len(nodes); i++ {
 		nodes[i].syns = make(map[int][]string)
 		for j := nodes[i].start; j < nodes[i].end; j++ {
-			fmt.Println(sentenceWords[j])
 			nodes[i].syns[j-nodes[i].start] = getSynonyms(sentenceWords[j])
 			nodes[i].numSyns = append(nodes[i].numSyns, len(nodes[i].syns[j-nodes[i].start]))
 		}
@@ -87,52 +90,52 @@ func main() {
 				totalSyllables = totalSyllables + cmudict[nodes[i].syns[k][arr[k]]]
 				testSentence = testSentence + nodes[i].syns[k][arr[k]] + " "
 			}
-			// fmt.Println(testSentence)
-			// fmt.Println(totalSyllables)
 			if totalSyllables == syllableTarget {
-				fmt.Println("GOOD: " + testSentence)
 				goodNodes = append(goodNodes, node{haikus: []string{testSentence}, start: nodes[i].start, end: nodes[i].end})
 			}
 		}
 
 	}
 
-	fmt.Println("7")
-	nodes = nil
-	syllableTarget = 7
-	for n := 0; n < len(goodNodes); n++ {
-		for i := 1; i <= syllableTarget; i++ {
-			// fmt.Println(goodNodes[n].haikus[len(goodNodes[n].haikus)-1])
-			// fmt.Println(sentenceWords[goodNodes[n].end : goodNodes[n].end+i])
-			nodes = append(nodes, node{haikus: goodNodes[n].haikus, start: goodNodes[n].end, end: goodNodes[n].end + i})
-		}
-	}
-	goodNodes = nil
-	for i := 0; i < len(nodes); i++ {
-		nodes[i].syns = make(map[int][]string)
-		for j := nodes[i].start; j < nodes[i].end; j++ {
-			fmt.Println(sentenceWords[j])
-			nodes[i].syns[j-nodes[i].start] = getSynonyms(sentenceWords[j])
-			nodes[i].numSyns = append(nodes[i].numSyns, len(nodes[i].syns[j-nodes[i].start]))
-		}
-		itr := &Iterator{Limit: nodes[i].numSyns}
-		for arr := itr.Next(); arr != nil; arr = itr.Next() {
-			totalSyllables := 0
-			testSentence := ""
-			for k := 0; k < len(arr); k++ {
-				totalSyllables = totalSyllables + cmudict[nodes[i].syns[k][arr[k]]]
-				testSentence = testSentence + nodes[i].syns[k][arr[k]] + " "
-			}
-			// fmt.Println(testSentence)
-			// fmt.Println(totalSyllables)
-			if totalSyllables == syllableTarget {
-				fmt.Println("GOOD: " + testSentence)
-				goodNodes = append(goodNodes, node{haikus: append(nodes[i].haikus, testSentence), start: nodes[i].start, end: nodes[i].end})
+	fmt.Printf("\n\nGood nodes: ")
+	fmt.Println(goodNodes)
+
+	for syllableTargetI := 1; syllableTargetI < 5; syllableTargetI++ {
+		syllableTarget = syllableTargets[syllableTargetI%len(syllableTargets)]
+		nodes = nil
+		for n := 0; n < len(goodNodes); n++ {
+			for i := 1; i <= syllableTarget; i++ {
+				final := goodNodes[n].end + i
+				if final < len(sentenceWords) {
+					nodes = append(nodes, node{haikus: goodNodes[n].haikus, start: goodNodes[n].end, end: final})
+				}
 			}
 		}
+		goodNodes = nil
+		for i := 0; i < len(nodes); i++ {
+			nodes[i].syns = make(map[int][]string)
+			for j := nodes[i].start; j < nodes[i].end; j++ {
+				nodes[i].syns[j-nodes[i].start] = getSynonyms(sentenceWords[j])
+				nodes[i].numSyns = append(nodes[i].numSyns, len(nodes[i].syns[j-nodes[i].start]))
+			}
+			itr := &Iterator{Limit: nodes[i].numSyns}
+			for arr := itr.Next(); arr != nil; arr = itr.Next() {
+				totalSyllables := 0
+				testSentence := ""
+				for k := 0; k < len(arr); k++ {
+					totalSyllables = totalSyllables + cmudict[nodes[i].syns[k][arr[k]]]
+					testSentence = testSentence + nodes[i].syns[k][arr[k]] + " "
+				}
+				if totalSyllables == syllableTarget {
+					goodNodes = append(goodNodes, node{haikus: append(nodes[i].haikus, testSentence), start: nodes[i].start, end: nodes[i].end})
+				}
+			}
+
+		}
+		fmt.Printf("\n\nGood nodes: ")
+		fmt.Println(goodNodes)
 
 	}
-	fmt.Println(goodNodes)
 
 	// Todo: replace each word with the puncuation near the word in the original
 

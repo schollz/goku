@@ -9,10 +9,26 @@ import (
 	"strings"
 )
 
+type haikuCluster struct {
+	haikus    []string
+	isHaikus  []bool
+	numHaikus int
+}
+
+type node struct {
+	haikus  []string
+	syns    map[int][]string
+	numSyns []int
+	start   int
+	end     int
+}
+
 var thesaurus map[string][]string
 var cmudict map[string]int
 var skipwords []string
 var err error
+var nodes []node
+var sentenceWords []string
 
 func loadCmudict(path string) (map[string]int, error) {
 
@@ -133,12 +149,6 @@ func getSynonyms(w string) (possibilities []string) {
 	return
 }
 
-type haikuCluster struct {
-	haikus    []string
-	isHaikus  []bool
-	numHaikus int
-}
-
 func getHaikus(words []string) (haikus []string, isHaikus []bool, numHaikus int) {
 	numHaikus = 0
 	for {
@@ -185,7 +195,7 @@ func randChoices(limits []int) (choices []int) {
 	return
 }
 
-func listAlternates(input []string) (output [100][]string) {
+func listAlternates(input []string) (output [1000000][]string) {
 	totals := make([]int, len(input))
 	for i, w := range input {
 		totals[i] = len(getSynonyms(w))
@@ -199,6 +209,66 @@ func listAlternates(input []string) (output [100][]string) {
 	return
 }
 
+// Iterator is a struct that holds a []int array
+// containing the maximum values that it should
+// iterate up to. So Iterator{Limit:{2,2,3}} will
+// iterate over all non-negative integer vectors
+// of length 3 with values of the form:
+// [0<=...<2, 0<=2...<3, 0<=...<3].
+// Calling next until the returned value is nil
+// will iterate over all these vectors in some order.
+// Should be lazy and take very little memory. Typical
+// use would be:
+// ```
+// itr := Iterator{{2,2,3}}
+// for arr := itr.Next(); arr != nil; arr = itr.Next() {
+//   ... // do something with `v`
+// }
+// ```
+type Iterator struct {
+	Limit []int
+	arr   []int
+}
+
+// Next returns the next []int in the sequence.
+// So something like {0,0} -> {0,1} -> {1,1} -> ...
+// When you get to the end calling Next will return nil.
+func (i *Iterator) Next() []int {
+	if i.arr == nil && len(i.Limit) > 0 {
+		i.arr = make([]int, len(i.Limit))
+	} else {
+		if !itrNext(i.arr, i.Limit) {
+			return nil
+		}
+	}
+	return i.arr
+}
+
+// true if can be incremented
+func itrNext(arr, max []int) bool {
+	if len(max) == 0 || len(arr) == 0 {
+		panic("must have non-zero lengths")
+	}
+	if len(arr) == 1 {
+		if arr[0] < max[0]-1 {
+			arr[0]++
+			return true
+		}
+		return false
+	}
+	if itrNext(arr[1:], max[1:]) {
+		return true
+	}
+	if arr[0] < max[0]-1 {
+		arr[0]++
+		for i := 1; i < len(arr); i++ {
+			arr[i] = 0
+		}
+		return true
+	}
+	return false
+}
+
 func init() {
 	// initialize the thesaurs and the syllable dictionary
 
@@ -206,7 +276,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(thesaurus["wonderful"])
+	fmt.Println(thesaurus["define"])
 	cmudict, err = loadCmudict("./resources/cmudict.0.7a")
 	if err != nil {
 		panic(err)
@@ -219,41 +289,84 @@ func main() {
 	// words := strings.Split(`want to play a game with seventeen syllables we write some poem want to play a game with seventeen syllables we write some poem something else`, " ")
 	// fmt.Println(getHaikus(words))
 	//input := []string{"cat", "is", "nice"}
-	sentence := `This is the sixth time we have had the pleasure of writing a birthday blog post for Go, and we would not be doing so if not for the wonderful and passionate people in our community. The Go team would like to thank everyone who has contributed code, written an open source library, authored a blog post, helped a new gopher, or just given Go a try. `
+	//sentence := `This is the sixth time we have had the pleasure of writing a birthday blog post for Go, and we would not be doing so if not for the wonderful and passionate people in our community. The Go team would like to thank everyone who has contributed code, written an open source library, authored a blog post, helped a new gopher, or just given Go a try. `
+	sentence := `Classical thinkers employed classification as a way to define and assess the quality of poetry. Notably, Aristotle's Poetics describes the three genres of poetry: the epic, comic, and tragic, and develops rules to distinguish the highest-quality poetry of each genre, based on the underlying purposes of that genre`
 	fmt.Println("ORIGINAL:")
 	fmt.Println(sentence)
 	sentence = strings.ToLower(sentence)
 	sentence = strings.Replace(sentence, "don't", "do not", -1)
 	sentence = strings.Replace(sentence, "'", "", -1)
-	words := regexp.MustCompile(`(\w+)`).FindAllString(sentence, -1)
-	alternatives := listAlternates(words)
-	bestNum := 0
-	var bestHaikus []string
-	var bestIsHaikus []bool
-
-	for i := 0; i < len(alternatives); i++ {
-		for j := 0; j < 3; j++ {
-			haikuString, isHaikus, numHaikus := getHaikus(alternatives[i][j:])
-			if numHaikus > bestNum {
-				if j > 0 {
-					haikuString = append([]string{strings.Join(alternatives[i][:j], " ")}, haikuString...)
-					isHaikus = append([]bool{false}, isHaikus...)
-				}
-				bestHaikus = haikuString
-				bestIsHaikus = isHaikus
+	sentenceWords = regexp.MustCompile(`(\w+)`).FindAllString(sentence, -1)
+	fmt.Println(sentenceWords)
+	var goodNodes []node
+	syllableTarget := 5
+	for i := 1; i <= syllableTarget; i++ {
+		fmt.Println(sentenceWords[0:i])
+		nodes = append(nodes, node{start: 0, end: i})
+	}
+	for i := 0; i < len(nodes); i++ {
+		nodes[i].syns = make(map[int][]string)
+		for j := nodes[i].start; j < nodes[i].end; j++ {
+			fmt.Println(sentenceWords[j])
+			nodes[i].syns[j-nodes[i].start] = getSynonyms(sentenceWords[j])
+			nodes[i].numSyns = append(nodes[i].numSyns, len(nodes[i].syns[j-nodes[i].start]))
+		}
+		fmt.Println(nodes[i])
+		itr := &Iterator{Limit: nodes[i].numSyns}
+		for arr := itr.Next(); arr != nil; arr = itr.Next() {
+			totalSyllables := 0
+			testSentence := ""
+			for k := 0; k < len(arr); k++ {
+				totalSyllables = totalSyllables + cmudict[nodes[i].syns[k][arr[k]]]
+				testSentence = testSentence + nodes[i].syns[k][arr[k]] + " "
+			}
+			// fmt.Println(testSentence)
+			// fmt.Println(totalSyllables)
+			if totalSyllables == syllableTarget {
+				fmt.Println("GOOD: " + testSentence)
+				goodNodes = append(goodNodes, node{haikus: []string{testSentence}, start: nodes[i].start, end: nodes[i].end})
 			}
 		}
+
 	}
-	fmt.Println("\n\nBEST HAIKU:")
-	for i, bestHaiku := range bestHaikus {
-		if bestIsHaikus[i] == true {
-			fmt.Printf("\n")
-		}
-		fmt.Println(bestHaiku)
-		if bestIsHaikus[i] == true {
-			fmt.Printf("\n")
-		}
-	}
+
+	// nodes := make([]node, len(goodNodes))
+	// nodes = goodNodes
+	// fmt.Println(nodes)
+	// syllableTarget := 5
+	// for i := 1; i <= syllableTarget; i++ {
+	// 	fmt.Println(sentenceWords[0:i])
+	// 	nodes[i].start
+	// }
+
+	// alternatives := listAlternates(words)
+	// bestNum := 0
+	// var bestHaikus []string
+	// var bestIsHaikus []bool
+
+	// for i := 0; i < len(alternatives); i++ {
+	// 	for j := 0; j < 1; j++ {
+	// 		haikuString, isHaikus, numHaikus := getHaikus(alternatives[i][j:])
+	// 		if numHaikus > bestNum {
+	// 			if j > 0 {
+	// 				haikuString = append([]string{strings.Join(alternatives[i][:j], " ")}, haikuString...)
+	// 				isHaikus = append([]bool{false}, isHaikus...)
+	// 			}
+	// 			bestHaikus = haikuString
+	// 			bestIsHaikus = isHaikus
+	// 		}
+	// 	}
+	// }
+	// fmt.Println("\n\nBEST HAIKU:")
+	// for i, bestHaiku := range bestHaikus {
+	// 	if bestIsHaikus[i] == true {
+	// 		fmt.Printf("\n")
+	// 	}
+	// 	fmt.Println(bestHaiku)
+	// 	if bestIsHaikus[i] == true {
+	// 		fmt.Printf("\n")
+	// 	}
+	// }
 
 	// Todo: replace each word with the puncuation near the word in the original
 

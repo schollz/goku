@@ -330,17 +330,42 @@ func main() {
 
 	}
 
+	fmt.Println("7")
 	nodes = nil
-	syllableTarget := 5
+	syllableTarget = 7
 	for n := 0; n < len(goodNodes); n++ {
 		for i := 1; i <= syllableTarget; i++ {
-			fmt.Println(goodNodes.haikus[0])
-			fmt.Println(sentenceWords[goodNodes[n].end : goodNodes[n].start+i])
-			nodes = append(nodes, node{start: goodNodes[n].end, end: goodNodes[n].start + i})
+			// fmt.Println(goodNodes[n].haikus[len(goodNodes[n].haikus)-1])
+			// fmt.Println(sentenceWords[goodNodes[n].end : goodNodes[n].end+i])
+			nodes = append(nodes, node{haikus: goodNodes[n].haikus, start: goodNodes[n].end, end: goodNodes[n].end + i})
+		}
+	}
+	goodNodes = nil
+	for i := 0; i < len(nodes); i++ {
+		nodes[i].syns = make(map[int][]string)
+		for j := nodes[i].start; j < nodes[i].end; j++ {
+			fmt.Println(sentenceWords[j])
+			nodes[i].syns[j-nodes[i].start] = getSynonyms(sentenceWords[j])
+			nodes[i].numSyns = append(nodes[i].numSyns, len(nodes[i].syns[j-nodes[i].start]))
+		}
+		itr := &Iterator{Limit: nodes[i].numSyns}
+		for arr := itr.Next(); arr != nil; arr = itr.Next() {
+			totalSyllables := 0
+			testSentence := ""
+			for k := 0; k < len(arr); k++ {
+				totalSyllables = totalSyllables + cmudict[nodes[i].syns[k][arr[k]]]
+				testSentence = testSentence + nodes[i].syns[k][arr[k]] + " "
+			}
+			// fmt.Println(testSentence)
+			// fmt.Println(totalSyllables)
+			if totalSyllables == syllableTarget {
+				fmt.Println("GOOD: " + testSentence)
+				goodNodes = append(goodNodes, node{haikus: append(nodes[i].haikus, testSentence), start: nodes[i].start, end: nodes[i].end})
+			}
 		}
 
 	}
-
+	fmt.Println(goodNodes)
 	// alternatives := listAlternates(words)
 	// bestNum := 0
 	// var bestHaikus []string
